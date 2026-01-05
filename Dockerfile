@@ -1,19 +1,18 @@
-# ใช้ Image พื้นฐานของ Jupyter ที่มี Conda ติดตั้งมาให้
 FROM jupyter/base-notebook:latest
 
-# คัดลอกไฟล์ spec-file.txt เข้าไปใน Image
-COPY spec-file.txt /tmp/
+# Copy the environment file
+COPY environment.yml /tmp/
 
-# สร้าง Conda environment จากไฟล์ spec-file และลบไฟล์ที่ไม่จำเป็นออกเพื่อลดขนาด Image
-RUN conda env create -f /tmp/spec-file.txt --name ml && \
+# Update the base environment with our specified packages
+# Using 'update' on base is often safer in docker than creating a new env that might not be activated correctly
+RUN conda env update -n base -f /tmp/environment.yml && \
     conda clean -afy
 
-# ติดตั้ง ipykernel ใน environment 'ml' เพื่อให้ Jupyter มองเห็น
-RUN conda run -n ml pip install --no-cache-dir ipykernel && \
-    conda run -n ml python -m ipykernel install --user --name=ml --display-name="Python (ml)"
+# Install ipykernel to ensure the kernel is registered
+RUN python -m ipykernel install --user --name=python3 --display-name="Python (ML)"
 
-# คัดลอกไฟล์ทั้งหมดในโปรเจกต์เข้าไปใน work directory ของ Jupyter
+# Copy project files
 COPY . /home/jovyan/work
 
-# ตั้งค่าเจ้าของไฟล์ให้เป็น user ของ Jupyter
+# Set permissions
 RUN chown -R ${NB_UID}:${NB_GID} /home/jovyan/work
